@@ -27,15 +27,18 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 | `backend/src/index.ts` | Carrega dotenv, valida `PORT` e inicia o listener. |
 | `backend/src/db/prisma.ts` | Exporta o cliente Prisma compartilhado com adaptador SQLite. |
 | `backend/prisma.config.ts` | Configura schema, migrations e URL do banco para a CLI. |
-| `backend/prisma/schema.prisma` | Define generator e datasource, ainda sem modelos de domínio. |
+| `backend/prisma/schema.prisma` | Define Usuario, Assinatura, Grupo e Participacao e suas relações. |
+| `backend/prisma/migrations/` | Migration inicial SQLite com FKs, unicidades e CHECKs. |
+| `backend/prisma/seed.ts` | Seed idempotente do administrador fictício local. |
+| `backend/tests/persistence.test.ts` | Testes de integração Prisma/SQLite com banco temporário. |
 | `backend/README.md` | Detalha instalação, ambiente e fluxo de desenvolvimento do backend. |
 | `README.md` | Contexto de negócio, objetivo acadêmico e participantes. |
 
 Prisma 7 e o adaptador SQLite estão configurados em `backend/prisma.config.ts`,
 `backend/prisma/schema.prisma` e `backend/src/db/prisma.ts`. O schema contém
-somente generator e datasource: não há modelos, tabelas ou migrations.
+os quatro modelos do UC-001, com migration inicial versionada.
 dotenv é carregado explicitamente; `.env` é opcional e deve ser criado manualmente.
-Isso é configuração inicial, não persistência do domínio implementada.
+A persistência está implementada e testada; não há fluxo HTTP do domínio.
 
 Os dois pacotes npm são independentes: **não existe `package.json` nem workspace
 na raiz**. Não execute comandos npm de pacote sem indicar o diretório correto.
@@ -76,11 +79,16 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   npm --prefix backend run db:validate
   npm --prefix backend run db:generate
   npm --prefix backend run db:migrate
+  npm --prefix backend run db:deploy
+  npm --prefix backend run db:seed
   npm --prefix backend run db:studio
   ```
   Em instalação nova, execute `db:generate` antes de `dev` e `typecheck`.
   O build gera o cliente automaticamente antes de compilar. Use `db:migrate`
-  apenas após definir modelos e revisar a alteração de schema; ele modifica o banco.
+  apenas ao evoluir modelos e revisar a alteração de schema; ele modifica o banco.
+  Em ambiente novo, use `db:deploy`, `db:generate` e `db:seed`, nessa ordem.
+  `db:deploy` aplica migrations versionadas sem criar novas; `db:seed` insere
+  `admin@shareplus.test` se ausente, sem alterar usuários existentes.
 - O backend usa porta `3000` por padrão; `PORT` deve ser inteiro entre 1 e 65535.
   Exemplo: `PORT=3001 npm --prefix backend run dev`.
 - `GET /health` responde `{"status":"ok"}`. Ele não verifica banco ou serviços
@@ -134,7 +142,13 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   SQLite. `DATABASE_URL` sobrescreve o padrão `file:./prisma/dev.db`, relativo
   ao diretório de trabalho. Execute a partir de `backend/` ou via
   `npm --prefix backend` para manter o caminho consistente. Não adicione modelos
-  ou migrations sem requisitos do domínio.
+  ou migrations sem requisitos do domínio. `valor_total_centavos` é `Int` positivo,
+  não valor decimal em reais. Preserve os CHECKs SQL da migration (centavos e
+  vagas inteiros positivos no limite de Int; vencimento inteiro entre 1 e 31).
+  O vínculo assinatura/grupo é único; a criação conjunta com participação do
+  administrador deve usar escrita aninhada/transação, como em `backend/README.md`.
+  O schema não impede assinatura isolada nem implementa autorização RN-004.
+  Papéis, status e periodicidade são textos obrigatórios, sem lista fechada.
 - Não há CORS, autenticação ou tratamento customizado de erros configurados.
   Defina contratos e políticas explicitamente ao implementar a integração/API.
 
@@ -158,8 +172,11 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   `npm --prefix backend run db:generate`; depois execute lint, typecheck e build.
   Valide alterações Prisma com `npm --prefix backend run db:validate`.
   Mudanças em contratos compartilhados exigem verificar os dois pacotes.
-- Não há runner ou script `test` em nenhum pacote, nem CI configurada. Não
-  invente `npm test` nem apresente lint/build como testes de comportamento.
+- O backend tem `npm --prefix backend test`: runner nativo Node via tsx, com
+  SQLite temporário e migrations reais, sem tocar no banco local. O typecheck
+  também cobre seed, testes e config via `backend/tsconfig.tools.json`.
+  O frontend não tem script `test`; não há CI configurada. Não apresente
+  lint/build como testes de comportamento.
 - Para novas regras de negócio, inclua testes com infraestrutura adequada ao
   escopo; se a configuração estiver ausente, explicite essa necessidade.
 - Relate os comandos executados, falhas e verificações não realizadas. Em caso
