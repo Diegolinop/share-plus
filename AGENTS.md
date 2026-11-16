@@ -23,14 +23,19 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 | `frontend/src/main.tsx` | Inicialização React com `StrictMode` e CSS global. |
 | `frontend/src/App.tsx` | Componente principal; ainda sem fluxo do domínio ou chamadas à API. |
 | `backend/` | Node.js + Express 5 + TypeScript 6; scaffold HTTP e configuração inicial Prisma. |
-| `backend/src/app.ts` | Cria/exporta o app, configura JSON e registra `GET /health`. |
+| `backend/src/app.ts` | Cria/exporta o app, configura CORS/JSON, registra `GET /health`, a rota de cadastro e o tratamento de erros. |
+| `backend/src/routes/assinaturas.ts` | Registra `POST /api/assinaturas`. |
+| `backend/src/controllers/assinaturas.ts` | Valida a entrada e traduz o resultado em respostas HTTP. |
+| `backend/src/services/assinaturas.ts` | Verifica o administrador e cria assinatura, grupo e participação em transação. |
 | `backend/src/index.ts` | Carrega dotenv, valida `PORT` e inicia o listener. |
 | `backend/src/db/prisma.ts` | Exporta o cliente Prisma compartilhado com adaptador SQLite. |
 | `backend/prisma.config.ts` | Configura schema, migrations e URL do banco para a CLI. |
 | `backend/prisma/schema.prisma` | Define Usuario, Assinatura, Grupo e Participacao e suas relações. |
 | `backend/prisma/migrations/` | Migration inicial SQLite com FKs, unicidades e CHECKs. |
 | `backend/prisma/seed.ts` | Seed idempotente do administrador fictício local. |
+| `backend/prisma/ensure-database.ts` | Prepara o arquivo SQLite antes de `db:deploy` em um ambiente novo. |
 | `backend/tests/persistence.test.ts` | Testes de integração Prisma/SQLite com banco temporário. |
+| `backend/tests/assinaturas-api.test.ts` | Testes HTTP do UC-001 com banco temporário. |
 | `backend/README.md` | Detalha instalação, ambiente e fluxo de desenvolvimento do backend. |
 | `README.md` | Contexto de negócio, objetivo acadêmico e participantes. |
 
@@ -38,7 +43,7 @@ Prisma 7 e o adaptador SQLite estão configurados em `backend/prisma.config.ts`,
 `backend/prisma/schema.prisma` e `backend/src/db/prisma.ts`. O schema contém
 os quatro modelos do UC-001, com migration inicial versionada.
 dotenv é carregado explicitamente; `.env` é opcional e deve ser criado manualmente.
-A persistência está implementada e testada; não há fluxo HTTP do domínio.
+A persistência e o endpoint `POST /api/assinaturas` estão implementados e testados.
 
 Os dois pacotes npm são independentes: **não existe `package.json` nem workspace
 na raiz**. Não execute comandos npm de pacote sem indicar o diretório correto.
@@ -87,6 +92,8 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   O build gera o cliente automaticamente antes de compilar. Use `db:migrate`
   apenas ao evoluir modelos e revisar a alteração de schema; ele modifica o banco.
   Em ambiente novo, use `db:deploy`, `db:generate` e `db:seed`, nessa ordem.
+  `db:deploy` prepara um arquivo SQLite vazio quando necessário antes de
+  executar a CLI Prisma, pois a criação direta falhou no Windows.
   `db:deploy` aplica migrations versionadas sem criar novas; `db:seed` insere
   `admin@shareplus.test` se ausente, sem alterar usuários existentes.
 - O backend usa porta `3000` por padrão; `PORT` deve ser inteiro entre 1 e 65535.
@@ -149,8 +156,12 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   administrador deve usar escrita aninhada/transação, como em `backend/README.md`.
   O schema não impede assinatura isolada nem implementa autorização RN-004.
   Papéis, status e periodicidade são textos obrigatórios, sem lista fechada.
-- Não há CORS, autenticação ou tratamento customizado de erros configurados.
-  Defina contratos e políticas explicitamente ao implementar a integração/API.
+- O cadastro configura CORS para `CORS_ORIGIN` (padrão `http://localhost:5173`),
+  valida a entrada com Zod e usa o cabeçalho `x-user-id` como autenticação
+  simulada. O cabeçalho não comprova identidade: nunca exponha esta API
+  publicamente sem autenticação real. A periodicidade aceita `MENSAL` e `ANUAL`;
+  o grupo e a participação inicial usam status `ATIVO`. O limite de
+  `valorTotal` é R$ 21.474.836,47, convertido para centavos inteiros.
 
 ## Segurança e arquivos gerados
 

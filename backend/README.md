@@ -22,10 +22,13 @@ manualmente `backend/.env` com:
 ```dotenv
 PORT=3000
 DATABASE_URL="file:./prisma/dev.db"
+CORS_ORIGIN="http://localhost:5173"
 ```
 
 Execute os comandos a partir de `backend/` (ou com `npm --prefix backend`
 na raiz) para manter os caminhos relativos do SQLite consistentes.
+`db:deploy` prepara o arquivo SQLite vazio quando necessário antes de aplicar
+as migrations, inclusive no Windows.
 O `.env` e o banco local não devem ser versionados.
 
 ## Comandos
@@ -62,7 +65,42 @@ const usuarios = await prisma.usuario.findMany()
 ```
 
 O servidor HTTP não conecta ao banco automaticamente e `/health` não verifica
-a persistência. Esta entrega não adiciona endpoints nem autenticação.
+a persistência.
+
+### API de cadastro (UC-001)
+
+`POST /api/assinaturas` recebe JSON com `servico` (texto não vazio),
+`valorTotal` (valor em reais positivo, com até duas casas decimais),
+`periodicidade` (`MENSAL` ou `ANUAL`), `diaVencimento` (1 a 31) e `vagas`
+(inteiro positivo). O máximo de `valorTotal` é R$ 21.474.836,47, limite do
+campo `Int` em centavos no banco.
+
+```sh
+curl -X POST http://localhost:3000/api/assinaturas \
+  -H 'Content-Type: application/json' \
+  -H 'x-user-id: 1' \
+  -d '{"servico":"Netflix","valorTotal":59.90,"periodicidade":"MENSAL","diaVencimento":15,"vagas":4}'
+```
+
+Resposta `201`:
+
+```json
+{"id":1,"servico":"Netflix","grupo":{"id":1,"status":"ATIVO","administradorId":1}}
+```
+
+Para esta entrega acadêmica, a autenticação é **simulada** pelo cabeçalho
+`x-user-id`: informe o ID de um usuário previamente cadastrado, como o criado
+por `db:seed`. A API consulta esse usuário no banco e exige `papel` igual a
+`Administrador`. Um ID ausente, inválido ou inexistente recebe `401`; um usuário
+com outro papel recebe `403`. Esse cabeçalho pode ser falsificado e **não é
+autenticação real**; substitua-o antes de expor a API publicamente.
+
+Dados inválidos recebem `400` com `error` e `detalhes`; JSON malformado recebe
+`400`; falhas inesperadas recebem `500` sem expor detalhes internos. A criação
+de assinatura, grupo `ATIVO` e participação inicial `ATIVO` ocorre em uma
+transação Prisma. O valor em reais é convertido em centavos inteiros. O CORS
+aceita por padrão `http://localhost:5173`; `CORS_ORIGIN` permite trocar essa
+origem.
 
 ### Contrato dos dados
 
