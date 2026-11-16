@@ -113,6 +113,7 @@ test('rejeita campos obrigatórios e valores inválidos sem persistir dados', as
     { servico: '' }, { servico: undefined }, { valorTotal: undefined },
     { periodicidade: undefined }, { diaVencimento: undefined }, { vagas: undefined },
     { valorTotal: 0 }, { valorTotal: -1 }, { valorTotal: 59.999 },
+    { valorTotal: 1e-9 }, { valorTotal: 0.001 },
     { periodicidade: 'SEMANAL' }, { diaVencimento: 0 }, { diaVencimento: 32 },
     { vagas: 0 }, { vagas: 1.5 },
   ]) {
@@ -131,6 +132,16 @@ test('distingue ausência de autenticação de falta de permissão', async () =>
   assert.equal(await prisma.assinatura.count(), 0)
 })
 
+test('aceita os limites mínimo e máximo do valor em centavos', async () => {
+  for (const valorTotal of [0.01, 21474836.47]) {
+    const response = await post({ ...cadastro, valorTotal }, adminId)
+    assert.equal(response.status, 201)
+    const result = await response.json() as { id: number }
+    const assinatura = await prisma.assinatura.findUniqueOrThrow({ where: { id: result.id } })
+    assert.equal(assinatura.valor_total_centavos, Math.round(valorTotal * 100))
+  }
+})
+
 test('responde 400 para JSON malformado', async () => {
   const response = await fetch(`${baseUrl}/api/assinaturas`, {
     method: 'POST',
@@ -139,6 +150,15 @@ test('responde 400 para JSON malformado', async () => {
   })
   assert.equal(response.status, 400)
   assert.equal(((await response.json()) as { error: string }).error, 'JSON inválido.')
+})
+
+test('responde 413 para JSON acima do limite sem persistir dados', async () => {
+  const response = await post({ ...cadastro, servico: 'x'.repeat(103000) }, adminId)
+  assert.equal(response.status, 413)
+  assert.equal(((await response.json()) as { error: string }).error, 'Corpo da requisição excede o limite de 100 KB.')
+  assert.equal(await prisma.assinatura.count(), 0)
+  assert.equal(await prisma.grupo.count(), 0)
+  assert.equal(await prisma.participacao.count(), 0)
 })
 
 test('responde ao preflight CORS da origem configurada', async () => {

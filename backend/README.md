@@ -70,7 +70,7 @@ a persistência.
 ### API de cadastro (UC-001)
 
 `POST /api/assinaturas` recebe JSON com `servico` (texto não vazio),
-`valorTotal` (valor em reais positivo, com até duas casas decimais),
+`valorTotal` (valor em reais a partir de R$ 0,01, com até duas casas decimais),
 `periodicidade` (`MENSAL` ou `ANUAL`), `diaVencimento` (1 a 31) e `vagas`
 (inteiro positivo). O máximo de `valorTotal` é R$ 21.474.836,47, limite do
 campo `Int` em centavos no banco.
@@ -96,7 +96,8 @@ com outro papel recebe `403`. Esse cabeçalho pode ser falsificado e **não é
 autenticação real**; substitua-o antes de expor a API publicamente.
 
 Dados inválidos recebem `400` com `error` e `detalhes`; JSON malformado recebe
-`400`; falhas inesperadas recebem `500` sem expor detalhes internos. A criação
+`400`; corpos JSON acima de 100 KB recebem `413`; falhas inesperadas recebem
+`500` sem expor detalhes internos. A criação
 de assinatura, grupo `ATIVO` e participação inicial `ATIVO` ocorre em uma
 transação Prisma. O valor em reais é convertido em centavos inteiros. O CORS
 aceita por padrão `http://localhost:5173`; `CORS_ORIGIN` permite trocar essa

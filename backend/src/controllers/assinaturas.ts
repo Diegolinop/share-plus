@@ -5,7 +5,7 @@ import { criarAssinatura } from '../services/assinaturas.js'
 
 const cadastroSchema = z.strictObject({
   servico: z.string().trim().min(1),
-  valorTotal: z.number().finite().positive().max(21474836.47).refine(
+  valorTotal: z.number().finite().min(0.01).max(21474836.47).refine(
     (valor) => Math.abs(valor * 100 - Math.round(valor * 100)) < 0.000001,
     'Informe no máximo duas casas decimais.',
   ),

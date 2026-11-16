@@ -161,7 +161,8 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   simulada. O cabeçalho não comprova identidade: nunca exponha esta API
   publicamente sem autenticação real. A periodicidade aceita `MENSAL` e `ANUAL`;
   o grupo e a participação inicial usam status `ATIVO`. O limite de
-  `valorTotal` é R$ 21.474.836,47, convertido para centavos inteiros.
+  `valorTotal` é R$ 21.474.836,47, convertido para centavos inteiros, com mínimo
+  de R$ 0,01. Corpos JSON acima de 100 KB recebem `413` em JSON padronizado.
 
 ## Segurança e arquivos gerados
 
