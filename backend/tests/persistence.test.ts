@@ -24,6 +24,7 @@ const assinatura = {
 }
 
 function deploy() {
+  execFileSync(process.execPath, ['--import', 'tsx', 'prisma/ensure-database.ts'], { cwd, env })
   return execFileSync(process.execPath, [
     'node_modules/prisma/build/index.js', 'migrate', 'deploy',
     '--config', 'prisma.config.ts',
