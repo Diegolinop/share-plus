@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { cadastrarAssinaturaSimulada } from '../services/assinaturas'
+import { cadastrarAssinatura } from '../services/assinaturaService'
 import type { AssinaturaCriada, CadastrarAssinatura, CadastroAssinatura } from '../services/assinaturas'
 
 type Campos = Record<keyof CadastroAssinatura, string>
@@ -18,7 +18,7 @@ function Campo({ nome, titulo, erro, children }: {
   </div>
 }
 
-export default function CadastrarAssinaturaPage({ cadastrar = cadastrarAssinaturaSimulada }: { cadastrar?: CadastrarAssinatura }) {
+export default function CadastrarAssinaturaPage({ cadastrar = cadastrarAssinatura }: { cadastrar?: CadastrarAssinatura }) {
   const [campos, setCampos] = useState<Campos>(inicial)
   const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
@@ -74,8 +74,9 @@ export default function CadastrarAssinaturaPage({ cadastrar = cadastrarAssinatur
       const resposta = await cadastrar(dados)
       setSucesso({ resposta, dados })
       requestAnimationFrame(() => titulo.current?.focus())
-    } catch {
-      setFalha('Não foi possível cadastrar a assinatura. Seus dados foram mantidos. Tente novamente.')
+    } catch (erro) {
+      const mensagem = erro instanceof Error ? erro.message : 'Não foi possível cadastrar a assinatura.'
+      setFalha(`${mensagem} Seus dados foram mantidos. Tente novamente.`)
     } finally {
       bloqueio.current = false
       setEnviando(false)
@@ -96,9 +97,9 @@ export default function CadastrarAssinaturaPage({ cadastrar = cadastrarAssinatur
       <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-label="Cadastro de assinatura">
           {sucesso ? <div>
-            <div className="mb-5 inline-flex rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-800" role="status">Cadastro simulado concluído</div>
+            <div className="mb-5 inline-flex rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-800" role="status">Cadastro concluído</div>
             <h2 ref={titulo} tabIndex={-1} className="text-2xl font-bold">Assinatura cadastrada com sucesso!</h2>
-            <p className="mt-3 text-slate-600">{sucesso.resposta.servico} está pronta para compartilhar nesta demonstração.</p>
+            <p className="mt-3 text-slate-600">{sucesso.resposta.servico} foi cadastrada no grupo #{sucesso.resposta.grupo.id}.</p>
             <dl className="my-6 grid grid-cols-1 gap-4 rounded-xl bg-slate-50 p-5 sm:grid-cols-2">
               <div><dt className="text-sm text-slate-600">Valor total</dt><dd className="font-semibold">{moeda.format(sucesso.dados.valorTotal)}</dd></div>
               <div><dt className="text-sm text-slate-600">Periodicidade</dt><dd className="font-semibold">{sucesso.dados.periodicidade === 'MENSAL' ? 'Mensal' : 'Anual'}</dd></div>
@@ -130,10 +131,7 @@ export default function CadastrarAssinaturaPage({ cadastrar = cadastrarAssinatur
             <h2 className="text-lg font-bold">O primeiro passo para compartilhar</h2>
             <p className="mt-3 text-sm leading-6">Informe o valor total do plano, a frequência de cobrança e quantas vagas estão disponíveis para os participantes.</p>
           </div>
-          <div className="rounded-2xl border border-dashed border-slate-300 p-6">
-            <h2 className="font-semibold">Ambiente de demonstração</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">O envio é simulado. Nenhum dado é salvo ou enviado à API. A integração HTTP será realizada em uma próxima etapa.</p>
-          </div>
+
         </aside>
       </div>
     </main>
