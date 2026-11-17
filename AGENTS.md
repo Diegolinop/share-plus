@@ -19,9 +19,10 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 
 | Caminho | Responsabilidade e estado |
 | --- | --- |
-| `frontend/` | React 19 + Vite 8 + TypeScript 6; interface ainda é o template com contador. |
+| `frontend/` | React 19 + Vite 8 + TypeScript 6 + Tailwind CSS 4; cadastro UC-001 com envio simulado. |
 | `frontend/src/main.tsx` | Inicialização React com `StrictMode` e CSS global. |
-| `frontend/src/App.tsx` | Componente principal; ainda sem fluxo do domínio ou chamadas à API. |
+| `frontend/src/App.tsx` | Renderiza `pages/CadastrarAssinatura.tsx`, com validação, carregamento, erros e confirmação. |
+| `frontend/src/services/assinaturas.ts` | Contrato tipado do cadastro e adaptador simulado sem HTTP ou persistência. |
 | `backend/` | Node.js + Express 5 + TypeScript 6; scaffold HTTP e configuração inicial Prisma. |
 | `backend/src/app.ts` | Cria/exporta o app, configura CORS/JSON, registra `GET /health`, a rota de cadastro e o tratamento de erros. |
 | `backend/src/routes/assinaturas.ts` | Registra `POST /api/assinaturas`. |
@@ -126,11 +127,13 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   6.0.3 habilita as verificações strict por padrão, mesmo sem `strict` explícito
   no frontend. Escreva código compatível e não desative essas verificações para
   contornar erros de tipos.
-- Os estilos são CSS comum, com variáveis, nesting, responsividade e tema escuro.
-  Preserve acessibilidade, HTML semântico, labels e navegação por teclado.
-- Não há roteador, biblioteca de estado global, cliente API ou proxy Vite
-  configurados. Avalie a necessidade antes de introduzir novas dependências.
-- `frontend/README.md` ainda descreve o template, não uma arquitetura do produto.
+- Os estilos usam Tailwind CSS 4 via `@tailwindcss/vite`, com estilos base em
+  `src/index.css` e paleta violeta. Preserve acessibilidade, HTML semântico,
+  labels e navegação por teclado. Não há guia visual formal versionado.
+- Não há roteador, estado global ou proxy HTTP. O cadastro recebe um adaptador
+  tipado por prop; o padrão simula uma resposta sem salvar dados. A integração
+  HTTP/autenticação fica para a issue específica, sem hardcode de identidade.
+- `frontend/README.md` descreve o fluxo, contrato e comandos de teste atuais.
 
 ### Backend
 
@@ -187,8 +190,9 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
 - O backend tem `npm --prefix backend test`: runner nativo Node via tsx, com
   SQLite temporário e migrations reais, sem tocar no banco local. O typecheck
   também cobre seed, testes e config via `backend/tsconfig.tools.json`.
-  O frontend não tem script `test`; não há CI configurada. Não apresente
-  lint/build como testes de comportamento.
+  O frontend oferece `npm --prefix frontend test` com Vitest, Testing Library e
+  jsdom para validações e interações do cadastro. Não há CI configurada. Não
+  apresente lint/build ou jsdom como validação visual em navegador real.
 - Para novas regras de negócio, inclua testes com infraestrutura adequada ao
   escopo; se a configuração estiver ausente, explicite essa necessidade.
 - Relate os comandos executados, falhas e verificações não realizadas. Em caso
