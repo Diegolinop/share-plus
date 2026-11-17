@@ -1,78 +1,66 @@
-# React + TypeScript + Vite
+# Frontend Share+
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19, Vite 8, TypeScript 6 e Tailwind CSS 4. A página inicial implementa
+UC-001 — Cadastrar Assinatura. A paleta violeta é uma proposta visual local:
+não há guia formal de identidade visual versionado no repositório.
 
-Currently, two official plugins are available:
+## Executar (na raiz do repositório)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm --prefix frontend ci
+npm --prefix frontend run dev
+npm --prefix frontend test
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Use Node.js >=24, compatível com o ambiente do projeto.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Organização e integração futura
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `src/pages/CadastrarAssinatura.tsx`: formulário responsivo, validações por
+  campo, foco no primeiro erro, carregamento, recuperação de falhas e confirmação.
+- `src/services/assinaturas.ts`: tipos de entrada/saída e simulação assíncrona.
+- `src/pages/CadastrarAssinatura.test.tsx`: testes de interação em jsdom.
 
+O adaptador padrão **não faz HTTP nem persiste dados**. A tela indica o modo
+simulado, inclusive após o sucesso. Para a issue de integração, substitua o
+adaptador pela prop `cadastrar`, preservando a assinatura `CadastrarAssinatura`.
+Rejeições exibem um erro geral e mantêm o formulário para uma nova tentativa.
+A integração definitiva deverá tratar autenticação e erros HTTP por campo.
+Não exponha o mecanismo `x-user-id` do backend como autenticação real.
+
+## Contrato consultado
+
+Fonte: `backend/src/controllers/assinaturas.ts` e
+`backend/src/services/assinaturas.ts` na branch `develop` usada como base.
+O endpoint é `POST /api/assinaturas` e responde com `201`.
+
+| Campo JSON | Tipo e regra |
+| --- | --- |
+| `servico` | string não vazia após trim |
+| `valorTotal` | number em reais: 0,01 a 21.474.836,47, até 2 casas decimais |
+| `periodicidade` | `MENSAL` ou `ANUAL` |
+| `diaVencimento` | inteiro de 1 a 31 |
+| `vagas` | inteiro de 1 a 2.147.483.647 |
+
+O valor aceita vírgula ou ponto decimal no formulário, sem separador de milhar,
+e é convertido para número no envio. Não se calcula preço por vaga porque a
+regra de divisão não faz parte deste formulário.
+
+Resposta de sucesso:
+
+```json
+{
+  "id": 1,
+  "servico": "Spotify",
+  "grupo": { "id": 1, "status": "ATIVO", "administradorId": 1 }
+}
 ```
+
+## Validação visual
+
+Os testes jsdom não medem layout. Conferir também em navegador com larguras
+360, 768 e 1440 px: ausência de rolagem horizontal, legibilidade dos erros,
+foco por teclado e estados de envio/sucesso. O formulário não implementa
+controle de acesso: isso depende da futura integração/autenticação.
