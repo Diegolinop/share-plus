@@ -1,5 +1,82 @@
 # Share+
 
+## Executar o UC-001 localmente
+
+Use Node.js 24.15 ou superior da linha 24, ou Node.js 26, e npm. Execute na raiz:
+
+```sh
+npm --prefix frontend ci
+npm --prefix backend ci
+npm --prefix backend run db:deploy
+npm --prefix backend run db:generate
+npm --prefix backend run db:seed
+```
+
+O Prisma aplica as migrations versionadas ao SQLite. O seed cria o administrador
+fictício `admin@shareplus.test` e imprime a linha `VITE_USER_ID=...`.
+Copie essa linha para `frontend/.env.local`. A identidade enviada no cabeçalho
+`x-user-id` é simulada para uso local. Variáveis Vite são públicas.
+
+| Arquivo | Variável | Configuração |
+| --- | --- | --- |
+| frontend/.env.local | VITE_USER_ID | ID impresso pelo seed |
+| frontend/.env.local | VITE_API_URL | Origem da API, padrão http://localhost:3000 |
+| backend/.env | PORT | Porta da API, padrão 3000 |
+| backend/.env | DATABASE_URL | Padrão file:./prisma/dev.db, relativo a backend/ |
+| backend/.env | CORS_ORIGIN | Origem do frontend, padrão http://localhost:5173 |
+
+Em dois terminais, execute `npm --prefix backend run dev` e
+`npm --prefix frontend run dev -- --port 5173 --strictPort`. Abra
+[Share+ local](http://localhost:5173), cadastre a assinatura e selecione
+**Meus grupos**. A listagem consulta os grupos administrados pela identidade
+configurada, do mais recente ao mais antigo. Reinicie o Vite ao alterar o ambiente.
+
+### Estrutura e API
+
+- `frontend/src/pages/` contém o formulário React e a listagem. Vite, TypeScript
+  e Tailwind CSS compõem o frontend.
+- `frontend/src/services/` contém os tipos e o cliente HTTP.
+- `backend/src/` contém a API Express em TypeScript, a validação Zod e a persistência Prisma.
+- `backend/prisma/` contém schema, migrations SQLite e seed.
+- `backend/tests/` contém os testes HTTP e de persistência com banco temporário.
+
+`POST /api/assinaturas` recebe JSON com `servico` (texto obrigatório),
+`valorTotal` (R$ 0,01 a 21.474.836,47, até duas casas decimais),
+`periodicidade` (MENSAL ou ANUAL), `diaVencimento` (inteiro de 1 a 31) e
+`vagas` (inteiro de 1 a 2.147.483.647). O retorno 201 contém o ID da assinatura,
+serviço e grupo criado. Erros retornam `error`: 400 para dados inválidos,
+401 para identidade ausente ou desconhecida e 403 para cadastro por membro.
+`GET /api/grupos` usa o mesmo cabeçalho e retorna uma lista de grupos com
+ID, status e nome do serviço. Consulte o [contrato completo](backend/README.md).
+
+### Verificar o cadastro
+
+Execute `npm --prefix frontend test` e `npm --prefix backend test`.
+Os testes da API aplicam migrations reais em um banco temporário e consultam
+as três tabelas após os pedidos. Para conferir o banco de desenvolvimento
+manualmente, execute `npm --prefix backend run db:studio`.
+
+| Cenário | Evidência verificada pelos testes |
+| --- | --- |
+| Cadastro válido | HTTP 201, valor em centavos, grupo ATIVO e participação ATIVO do administrador |
+| FE01 | Omissão de serviço, valor ou vencimento retorna 400 |
+| FE02 | Valor zero ou negativo retorna 400 |
+| Periodicidade ou vagas inválidas | HTTP 400 e tabelas sem registros parciais |
+| RN-004 | Membro recebe 403; interface apresenta a mensagem retornada |
+| Falha ao criar a participação | A transação reverte também assinatura e grupo |
+| Listagem | O grupo criado aparece para o administrador e a consulta de outro usuário retorna lista vazia |
+
+### Evidências de execução
+
+Passaram 23 testes de interface e 17 de API e persistência. Em uma execução
+local no Edge, o formulário enviou um plano mensal de R$ 39,90 à API e o
+grupo continuou visível após recarregar a listagem. Capturas dessa execução:
+
+- [FE01 — campos obrigatórios ausentes](docs/evidencias/fe01.png)
+- [FE02 — valor igual a zero](docs/evidencias/fe02.png)
+- [Confirmação do cadastro](docs/evidencias/cadastro.png)
+- [Grupo persistido após recarregar a página](docs/evidencias/grupos.png)
+
 ## Descrição do Projeto
 Implementação do UC-001: "Cadastrar Assinatura" da documentação feita para a primeira entrega do trabalho da disciplina de Análise de Sistemas de Software. Documentação anterior disponível em: https://github.com/brsctoo/Trabalho_Choma
 

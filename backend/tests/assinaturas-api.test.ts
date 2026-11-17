@@ -102,6 +102,12 @@ test('cadastra assinatura, grupo ativo e administrador como primeiro participant
   assert.equal(assinatura.periodicidade, 'MENSAL')
   const grupo = assinatura.grupo
   assert.ok(grupo)
+  const grupos = await fetch(baseUrl + '/api/grupos', { headers: { 'x-user-id': String(adminId) } })
+  assert.equal(grupos.status, 200)
+  assert.deepEqual(await grupos.json(), [{ id: grupo.id, status: 'ATIVO', assinatura: { servico: 'Netflix' } }])
+  const outros = await fetch(baseUrl + '/api/grupos', { headers: { 'x-user-id': String(membroId) } })
+  assert.deepEqual(await outros.json(), [])
+  assert.equal((await fetch(baseUrl + '/api/grupos')).status, 401)
   assert.equal(grupo.id, result.grupo.id)
   assert.deepEqual(grupo.participacoes.map(({ usuario_id, status }) => ({ usuario_id, status })), [
     { usuario_id: adminId, status: 'ATIVO' },
@@ -123,6 +129,7 @@ test('rejeita campos obrigatórios e valores inválidos sem persistir dados', as
   }
   assert.equal(await prisma.assinatura.count(), 0)
   assert.equal(await prisma.grupo.count(), 0)
+  assert.equal(await prisma.participacao.count(), 0)
 })
 
 test('distingue ausência de autenticação de falta de permissão', async () => {

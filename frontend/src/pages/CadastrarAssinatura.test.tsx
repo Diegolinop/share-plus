@@ -105,13 +105,24 @@ describe('UC-001', () => {
     expect(cadastrar).toHaveBeenCalledTimes(2)
   })
 
-  it('funciona com o adaptador simulado sem HTTP', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    render(<CadastrarAssinatura />)
-    preencher()
-    enviar()
-    expect(await screen.findByText('Cadastro simulado concluído', {}, { timeout: 2000 })).toBeInTheDocument()
-    expect(fetchSpy).not.toHaveBeenCalled()
-    fetchSpy.mockRestore()
+  it('envia JSON com a identidade configurada e apresenta a recusa do backend', async () => {
+    vi.stubEnv('VITE_USER_ID', '7')
+    vi.stubEnv('VITE_API_URL', 'http://localhost:3001/')
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ error: 'Apenas administradores podem cadastrar assinaturas.' }, { status: 403 }),
+    )
+    try {
+      render(<CadastrarAssinatura />)
+      preencher()
+      enviar()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Apenas administradores podem cadastrar assinaturas.')
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3001/api/assinaturas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-user-id': '7' },
+        body: JSON.stringify({ servico: 'Spotify', valorTotal: 39.9, periodicidade: 'MENSAL', diaVencimento: 10, vagas: 4 }),
+      })
+    } finally {
+      fetchSpy.mockRestore()
+      vi.unstubAllEnvs()
+    }
   })
 })
