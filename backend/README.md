@@ -103,6 +103,12 @@ transação Prisma. O valor em reais é convertido em centavos inteiros. O CORS
 aceita por padrão `http://localhost:5173`; `CORS_ORIGIN` permite trocar essa
 origem.
 
+Envie `Idempotency-Key` para repetir um cadastro quando a confirmação se perder.
+A chave é opcional e aceita de 1 a 128 letras ASCII, números, hífens ou
+sublinhados. A mesma chave e os mesmos dados retornam o cadastro original com
+`201`. Para o mesmo administrador, a mesma chave com outros dados retorna
+`409`. Use uma chave nova para iniciar outro cadastro.
+
 ### Contrato dos dados
 
 - IDs inteiros autoincrementais e campos escalares obrigatórios.

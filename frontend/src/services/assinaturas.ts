@@ -14,13 +14,3 @@ export type AssinaturaCriada = {
 }
 
 export type CadastrarAssinatura = (dados: CadastroAssinatura) => Promise<AssinaturaCriada>
-
-// Substituir este adaptador na issue de integração HTTP; não persiste dados.
-export const cadastrarAssinaturaSimulada: CadastrarAssinatura = async (dados) => {
-  await new Promise((resolve) => setTimeout(resolve, 800))
-  return {
-    id: 1,
-    servico: dados.servico,
-    grupo: { id: 1, status: 'ATIVO', administradorId: 1 },
-  }
-}

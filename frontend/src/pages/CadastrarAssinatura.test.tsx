@@ -105,13 +105,55 @@ describe('UC-001', () => {
     expect(cadastrar).toHaveBeenCalledTimes(2)
   })
 
-  it('funciona com o adaptador simulado sem HTTP', async () => {
+  it('envia JSON com a identidade configurada e apresenta a recusa do backend', async () => {
+    vi.stubEnv('VITE_USER_ID', '7')
+    vi.stubEnv('VITE_API_URL', 'http://localhost:3001/')
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ error: 'Apenas administradores podem cadastrar assinaturas.' }, { status: 403 }),
+    )
+    try {
+      render(<CadastrarAssinatura />)
+      preencher()
+      enviar()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Apenas administradores podem cadastrar assinaturas.')
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:3001/api/assinaturas', {
+        method: 'POST', headers: expect.any(Headers),
+        body: JSON.stringify({ servico: 'Spotify', valorTotal: 39.9, periodicidade: 'MENSAL', diaVencimento: 10, vagas: 4 }),
+      })
+      const headers = new Headers(fetchSpy.mock.calls[0]?.[1]?.headers)
+      expect(headers.get('content-type')).toBe('application/json')
+      expect(headers.get('x-user-id')).toBe('7')
+      expect(headers.get('idempotency-key')).toBeTruthy()
+    } finally {
+      fetchSpy.mockRestore()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('reutiliza a chave após perder a confirmação e libera outra após o sucesso', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    render(<CadastrarAssinatura />)
-    preencher()
-    enviar()
-    expect(await screen.findByText('Cadastro simulado concluído', {}, { timeout: 2000 })).toBeInTheDocument()
-    expect(fetchSpy).not.toHaveBeenCalled()
-    fetchSpy.mockRestore()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockImplementation(async () => Response.json(resposta, { status: 201 }))
+    try {
+      render(<CadastrarAssinatura />)
+      preencher()
+      enviar()
+      expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível conectar à API.')
+
+      enviar()
+      await screen.findByText('Assinatura cadastrada com sucesso!')
+      await userEvent.click(screen.getByRole('button', { name: 'Cadastrar outra assinatura' }))
+      preencher()
+      enviar()
+      await screen.findByText('Assinatura cadastrada com sucesso!')
+
+      const chaves = fetchSpy.mock.calls.map(([, opcoes]) => new Headers(opcoes?.headers).get('idempotency-key'))
+      expect(chaves).toHaveLength(3)
+      expect(chaves[0]).toBeTruthy()
+      expect(chaves[1]).toBe(chaves[0])
+      expect(chaves[2]).not.toBe(chaves[0])
+    } finally {
+      fetchSpy.mockRestore()
+    }
   })
 })

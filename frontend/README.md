@@ -16,19 +16,13 @@ npm --prefix frontend run build
 
 Use Node.js >=24, compatível com o ambiente do projeto.
 
-## Organização e integração futura
+## Integração local
 
-- `src/pages/CadastrarAssinatura.tsx`: formulário responsivo, validações por
-  campo, foco no primeiro erro, carregamento, recuperação de falhas e confirmação.
-- `src/services/assinaturas.ts`: tipos de entrada/saída e simulação assíncrona.
-- `src/pages/CadastrarAssinatura.test.tsx`: testes de interação em jsdom.
-
-O adaptador padrão **não faz HTTP nem persiste dados**. A tela indica o modo
-simulado, inclusive após o sucesso. Para a issue de integração, substitua o
-adaptador pela prop `cadastrar`, preservando a assinatura `CadastrarAssinatura`.
-Rejeições exibem um erro geral e mantêm o formulário para uma nova tentativa.
-A integração definitiva deverá tratar autenticação e erros HTTP por campo.
-Não exponha o mecanismo `x-user-id` do backend como autenticação real.
+Configure `frontend/.env.local` com o ID exibido pelo seed. O serviço
+`src/services/assinaturaService.ts` envia o cadastro e consulta os grupos
+em `/grupos`. Consulte o [guia da raiz](../README.md) para preparar o banco
+e iniciar os dois servidores. Os erros da API aparecem no formulário, que
+preserva os campos para uma nova tentativa.
 
 ## Contrato consultado
 
@@ -62,5 +56,4 @@ Resposta de sucesso:
 
 Os testes jsdom não medem layout. Conferir também em navegador com larguras
 360, 768 e 1440 px: ausência de rolagem horizontal, legibilidade dos erros,
-foco por teclado e estados de envio/sucesso. O formulário não implementa
-controle de acesso: isso depende da futura integração/autenticação.
+foco por teclado e estados de envio/sucesso.

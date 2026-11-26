@@ -1,6 +1,7 @@
 import cors from 'cors'
 import express, { type ErrorRequestHandler } from 'express'
 
+import { listarGrupos } from './controllers/grupos.js'
 import { assinaturasRouter } from './routes/assinaturas.js'
 
 export const app = express()
@@ -13,6 +14,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
+app.get('/api/grupos', listarGrupos)
 app.use('/api/assinaturas', assinaturasRouter)
 
 const handleError: ErrorRequestHandler = (error: unknown, _req, res, next) => {

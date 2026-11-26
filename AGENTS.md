@@ -19,10 +19,10 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 
 | Caminho | Responsabilidade e estado |
 | --- | --- |
-| `frontend/` | React 19 + Vite 8 + TypeScript 6 + Tailwind CSS 4; cadastro UC-001 com envio simulado. |
+| `frontend/` | React 19 + Vite 8 + TypeScript 6 + Tailwind CSS 4; cadastro UC-001 via API e listagem dos grupos administrados. |
 | `frontend/src/main.tsx` | Inicialização React com `StrictMode` e CSS global. |
-| `frontend/src/App.tsx` | Renderiza `pages/CadastrarAssinatura.tsx`, com validação, carregamento, erros e confirmação. |
-| `frontend/src/services/assinaturas.ts` | Contrato tipado do cadastro e adaptador simulado sem HTTP ou persistência. |
+| `frontend/src/App.tsx` | Seleciona o formulário em `/` e a listagem em `/grupos`. |
+| `frontend/src/services/assinaturas.ts` | Contrato tipado do cadastro. O cliente HTTP está em `assinaturaService.ts`. |
 | `backend/` | Node.js + Express 5 + TypeScript 6; scaffold HTTP e configuração inicial Prisma. |
 | `backend/src/app.ts` | Cria/exporta o app, configura CORS/JSON, registra `GET /health`, a rota de cadastro e o tratamento de erros. |
 | `backend/src/routes/assinaturas.ts` | Registra `POST /api/assinaturas`. |
@@ -32,7 +32,7 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 | `backend/src/db/prisma.ts` | Exporta o cliente Prisma compartilhado com adaptador SQLite. |
 | `backend/prisma.config.ts` | Configura schema, migrations e URL do banco para a CLI. |
 | `backend/prisma/schema.prisma` | Define Usuario, Assinatura, Grupo e Participacao e suas relações. |
-| `backend/prisma/migrations/` | Migration inicial SQLite com FKs, unicidades e CHECKs. |
+| `backend/prisma/migrations/` | Migrations SQLite com FKs, unicidades, CHECKs e chave de idempotência. |
 | `backend/prisma/seed.ts` | Seed idempotente do administrador fictício local. |
 | `backend/prisma/ensure-database.ts` | Prepara o arquivo SQLite antes de `db:deploy` em um ambiente novo. |
 | `backend/tests/persistence.test.ts` | Testes de integração Prisma/SQLite com banco temporário. |
@@ -131,8 +131,8 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   `src/index.css` e paleta violeta. Preserve acessibilidade, HTML semântico,
   labels e navegação por teclado. Não há guia visual formal versionado.
 - Não há roteador, estado global ou proxy HTTP. O cadastro recebe um adaptador
-  tipado por prop; o padrão simula uma resposta sem salvar dados. A integração
-  HTTP/autenticação fica para a issue específica, sem hardcode de identidade.
+  tipado por prop. O padrão usa fetch com VITE_API_URL e VITE_USER_ID.
+  GET /api/grupos retorna os grupos administrados pelo usuário informado.
 - `frontend/README.md` descreve o fluxo, contrato e comandos de teste atuais.
 
 ### Backend
@@ -166,6 +166,8 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   o grupo e a participação inicial usam status `ATIVO`. O limite de
   `valorTotal` é R$ 21.474.836,47, convertido para centavos inteiros, com mínimo
   de R$ 0,01. Corpos JSON acima de 100 KB recebem `413` em JSON padronizado.
+  `Idempotency-Key` é opcional no cadastro e só é única por administrador.
+  Reenvios com a mesma chave e os mesmos dados retornam o cadastro existente.
 
 ## Segurança e arquivos gerados
 
