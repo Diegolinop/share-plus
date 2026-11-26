@@ -1,0 +1,56 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Usuario {
+  id                   Int            @id @default(autoincrement())
+  nome                 String
+  email                String         @unique
+  papel                String
+  grupos_administrados Grupo[]        @relation("AdministradorGrupo")
+  participacoes        Participacao[]
+}
+
+model Assinatura {
+  id                   Int    @id @default(autoincrement())
+  servico              String
+  // Valor inteiro em centavos, nunca em reais com ponto flutuante.
+  valor_total_centavos Int
+  periodicidade        String
+  dia_vencimento       Int
+  vagas                Int
+  grupo                Grupo?
+}
+
+model Grupo {
+  id                 Int            @id @default(autoincrement())
+  assinatura_id      Int            @unique
+  administrador_id   Int
+  status             String
+  chave_idempotencia String?
+  assinatura         Assinatura     @relation(fields: [assinatura_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  administrador      Usuario        @relation("AdministradorGrupo", fields: [administrador_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  participacoes      Participacao[]
+
+  @@index([administrador_id])
+  @@unique([administrador_id, chave_idempotencia])
+}
+
+model Participacao {
+  id         Int     @id @default(autoincrement())
+  grupo_id   Int
+  usuario_id Int
+  status     String
+  grupo      Grupo   @relation(fields: [grupo_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  usuario    Usuario @relation(fields: [usuario_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([grupo_id, usuario_id])
+  @@index([usuario_id])
+}
