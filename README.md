@@ -46,7 +46,10 @@ configurada, do mais recente ao mais antigo. Reinicie o Vite ao alterar o ambien
 `vagas` (inteiro de 1 a 2.147.483.647). O retorno 201 contém o ID da assinatura,
 serviço e grupo criado. Erros retornam `error`: 400 para dados inválidos,
 401 para identidade ausente ou desconhecida e 403 para cadastro por membro.
-`GET /api/grupos` usa o mesmo cabeçalho e retorna uma lista de grupos com
+Com o cabeçalho opcional `Idempotency-Key`, repetir o envio com os mesmos dados
+recupera o cadastro original. Usar a mesma chave com dados diferentes para o
+mesmo administrador retorna 409. O formulário reenvia a chave até obter a confirmação.
+`GET /api/grupos` usa `x-user-id` e retorna uma lista de grupos com
 ID, status e nome do serviço. Consulte o [contrato completo](backend/README.md).
 
 ### Verificar o cadastro

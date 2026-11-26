@@ -27,13 +27,23 @@ export async function cadastrarAssinatura(req: Request, res: Response) {
     return
   }
 
-  const resultado = await criarAssinatura(id, dados.data)
+  const chave = req.header('idempotency-key')
+  if (chave !== undefined && !/^[A-Za-z0-9_-]{1,128}$/.test(chave)) {
+    res.status(400).json({ error: 'Chave de idempotência inválida.' })
+    return
+  }
+
+  const resultado = await criarAssinatura(id, dados.data, chave)
   if (resultado.tipo === 'nao_autenticado') {
     res.status(401).json({ error: 'Usuário não autenticado.' })
     return
   }
   if (resultado.tipo === 'sem_permissao') {
     res.status(403).json({ error: 'Apenas administradores podem cadastrar assinaturas.' })
+    return
+  }
+  if (resultado.tipo === 'chave_em_uso') {
+    res.status(409).json({ error: 'Esta chave de idempotência já está associada a outro cadastro.' })
     return
   }
 

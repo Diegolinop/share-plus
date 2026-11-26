@@ -2,7 +2,7 @@ import CadastrarAssinatura from './pages/CadastrarAssinatura'
 import Grupos from './pages/Grupos'
 
 export default function App() {
-  const grupos = window.location.pathname === '/grupos'
+  const grupos = /^\/grupos\/?$/.test(window.location.pathname)
   return <>
     <nav aria-label="Navegação principal" className="flex justify-center gap-6 bg-violet-900 px-5 py-3 text-white">
       <a aria-current={grupos ? undefined : 'page'} href="/">Cadastrar assinatura</a>

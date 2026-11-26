@@ -32,7 +32,7 @@ manifests e o código atual antes de assumir que uma funcionalidade existe.
 | `backend/src/db/prisma.ts` | Exporta o cliente Prisma compartilhado com adaptador SQLite. |
 | `backend/prisma.config.ts` | Configura schema, migrations e URL do banco para a CLI. |
 | `backend/prisma/schema.prisma` | Define Usuario, Assinatura, Grupo e Participacao e suas relações. |
-| `backend/prisma/migrations/` | Migration inicial SQLite com FKs, unicidades e CHECKs. |
+| `backend/prisma/migrations/` | Migrations SQLite com FKs, unicidades, CHECKs e chave de idempotência. |
 | `backend/prisma/seed.ts` | Seed idempotente do administrador fictício local. |
 | `backend/prisma/ensure-database.ts` | Prepara o arquivo SQLite antes de `db:deploy` em um ambiente novo. |
 | `backend/tests/persistence.test.ts` | Testes de integração Prisma/SQLite com banco temporário. |
@@ -166,6 +166,8 @@ Todos os comandos abaixo são executados **na raiz do repositório**:
   o grupo e a participação inicial usam status `ATIVO`. O limite de
   `valorTotal` é R$ 21.474.836,47, convertido para centavos inteiros, com mínimo
   de R$ 0,01. Corpos JSON acima de 100 KB recebem `413` em JSON padronizado.
+  `Idempotency-Key` é opcional no cadastro e só é única por administrador.
+  Reenvios com a mesma chave e os mesmos dados retornam o cadastro existente.
 
 ## Segurança e arquivos gerados
 

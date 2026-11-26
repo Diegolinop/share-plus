@@ -30,15 +30,17 @@ model Assinatura {
 }
 
 model Grupo {
-  id               Int            @id @default(autoincrement())
-  assinatura_id    Int            @unique
-  administrador_id Int
-  status           String
-  assinatura       Assinatura     @relation(fields: [assinatura_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  administrador    Usuario        @relation("AdministradorGrupo", fields: [administrador_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  participacoes    Participacao[]
+  id                 Int            @id @default(autoincrement())
+  assinatura_id      Int            @unique
+  administrador_id   Int
+  status             String
+  chave_idempotencia String?
+  assinatura         Assinatura     @relation(fields: [assinatura_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  administrador      Usuario        @relation("AdministradorGrupo", fields: [administrador_id], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  participacoes      Participacao[]
 
   @@index([administrador_id])
+  @@unique([administrador_id, chave_idempotencia])
 }
 
 model Participacao {

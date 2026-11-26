@@ -27,13 +27,14 @@ const cadastro = {
   vagas: 4,
 }
 
-async function post(body: unknown, usuarioId?: number) {
+async function post(body: unknown, usuarioId?: number, chave?: string) {
   return fetch(`${baseUrl}/api/assinaturas`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       origin: 'http://localhost:5173',
       ...(usuarioId === undefined ? {} : { 'x-user-id': String(usuarioId) }),
+      ...(chave === undefined ? {} : { 'idempotency-key': chave }),
     },
     body: JSON.stringify(body),
   })
@@ -132,6 +133,53 @@ test('rejeita campos obrigatórios e valores inválidos sem persistir dados', as
   assert.equal(await prisma.participacao.count(), 0)
 })
 
+test('recupera o cadastro original ao repetir o envio depois de perder a confirmação', async () => {
+  const primeira = await post(cadastro, adminId, 'cadastro-sem-confirmacao')
+  assert.equal(primeira.status, 201)
+  await primeira.body?.cancel()
+
+  const repetida = await post(cadastro, adminId, 'cadastro-sem-confirmacao')
+  assert.equal(repetida.status, 201)
+  const grupo = await prisma.grupo.findFirstOrThrow()
+  assert.deepEqual(await repetida.json(), {
+    id: grupo.assinatura_id,
+    servico: cadastro.servico,
+    grupo: { id: grupo.id, status: 'ATIVO', administradorId: adminId },
+  })
+  assert.equal(await prisma.assinatura.count(), 1)
+  assert.equal(await prisma.grupo.count(), 1)
+  assert.equal(await prisma.participacao.count(), 1)
+})
+
+test('processa solicitações simultâneas com a mesma chave uma única vez', async () => {
+  const respostas = await Promise.all([
+    post(cadastro, adminId, 'cadastro-simultaneo'),
+    post(cadastro, adminId, 'cadastro-simultaneo'),
+  ])
+  assert.deepEqual(respostas.map(({ status }) => status), [201, 201])
+  const resultados = await Promise.all(respostas.map((resposta) => resposta.json()))
+  assert.deepEqual(resultados[0], resultados[1])
+  assert.equal(await prisma.grupo.count(), 1)
+})
+
+test('rejeita chaves inválidas e limita conflitos de chave ao mesmo administrador', async () => {
+  const invalida = await post(cadastro, adminId, 'chave,inválida')
+  assert.equal(invalida.status, 400)
+  assert.equal(await prisma.grupo.count(), 0)
+
+  const chave = 'cadastro-compartilhado'
+  assert.equal((await post(cadastro, adminId, chave)).status, 201)
+  const outrosDados = { ...cadastro, vagas: 2 }
+  assert.equal((await post(outrosDados, adminId, chave)).status, 409)
+  assert.equal(await prisma.grupo.count(), 1)
+
+  const outroAdmin = await prisma.usuario.create({
+    data: { nome: 'Outro administrador', email: 'outro@example.test', papel: 'Administrador' },
+  })
+  assert.equal((await post(outrosDados, outroAdmin.id, chave)).status, 201)
+  assert.equal(await prisma.grupo.count(), 2)
+})
+
 test('distingue ausência de autenticação de falta de permissão', async () => {
   assert.equal((await post(cadastro)).status, 401)
   assert.equal((await post(cadastro, 999999)).status, 401)
@@ -174,12 +222,13 @@ test('responde ao preflight CORS da origem configurada', async () => {
     headers: {
       origin: 'http://localhost:5173',
       'access-control-request-method': 'POST',
-      'access-control-request-headers': 'content-type,x-user-id',
+      'access-control-request-headers': 'content-type,idempotency-key,x-user-id',
     },
   })
   assert.equal(response.status, 204)
   assert.equal(response.headers.get('access-control-allow-origin'), 'http://localhost:5173')
   assert.match(response.headers.get('access-control-allow-headers') ?? '', /x-user-id/i)
+  assert.match(response.headers.get('access-control-allow-headers') ?? '', /idempotency-key/i)
 })
 
 test('desfaz assinatura e grupo quando a participação falha', async () => {
